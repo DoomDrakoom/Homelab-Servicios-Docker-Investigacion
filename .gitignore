@@ -1,0 +1,137 @@
+# =========================================
+# Variables de entorno / secretos genéricos
+# =========================================
+*.env
+.env.*
+**/.env
+**/secrets/
+**/secret/
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+*credentials*
+*password*
+*token*
+
+# =========================================
+# Claves SSH / GPG
+# =========================================
+**/.ssh/
+id_rsa*
+id_ed25519*
+id_ecdsa*
+known_hosts
+authorized_keys
+*.gpg
+*.asc
+
+# =========================================
+# Datos genéricos de volúmenes Docker
+# =========================================
+**/data/
+**/appdata/
+**/config/
+**/db-data/
+**/database/
+**/*_data/
+**/volumes/
+
+# =========================================
+# Gitea
+# =========================================
+**/gitea-data/
+**/gitea-db-data/
+**/gitea/data/
+
+# =========================================
+# Pi-hole
+# =========================================
+**/etc-pihole/
+**/etc-dnsmasq.d/
+
+# =========================================
+# Homarr
+# =========================================
+**/homarr/appdata/
+**/homarr/db/
+**/homarr/redis/
+
+# =========================================
+# Jellyfin
+# =========================================
+**/jellyfin/config/
+**/jellyfin/cache/
+
+# =========================================
+# Grafana / Prometheus
+# =========================================
+**/grafana_data/
+**/grafana/data/
+**/prometheus_data/
+**/prometheus/data/
+
+# =========================================
+# Uptime Kuma
+# =========================================
+**/uptime_kuma/data/
+
+# =========================================
+# Nginx Proxy Manager (certificados, DB, letsencrypt)
+# =========================================
+**/NPM/data/
+**/NPM/letsencrypt/
+**/nginx-proxy-manager/data/
+**/nginx-proxy-manager/letsencrypt/
+**/letsencrypt/
+
+# =========================================
+# n8n (credenciales y workflows con datos sensibles)
+# =========================================
+**/n8n/data/
+**/.n8n/
+
+# =========================================
+# Duplicati
+# =========================================
+**/duplicati/config/
+**/duplicati/backups/
+
+# =========================================
+# Bases de datos genéricas (MySQL, PostgreSQL, MariaDB, MongoDB, Redis)
+# =========================================
+**/mysql-data/
+**/mariadb-data/
+**/postgres-data/
+**/pgdata/
+**/mongo-data/
+**/redis-data/
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# =========================================
+# Docker general
+# =========================================
+docker-compose.override.yml
+*.log
+logs/
+
+# =========================================
+# Backups / dumps genéricos
+# =========================================
+*.bak
+*.backup
+*.dump
+*.tar
+*.tar.gz
+*.zip
+
+# =========================================
+# Sistema / editores
+# =========================================
+.DS_Store
+Thumbs.db
+*.swp

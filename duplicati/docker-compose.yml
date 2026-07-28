@@ -1,0 +1,18 @@
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+      - SETTINGS_ENCRYPTION_KEY=${DUPLICATI_KEY}
+      - DUPLICATI__WEBSERVICE_PASSWORD=${WEB_PASSWD}
+    volumes:
+      - ./duplicati/config:/config
+      - ./duplicati/backups:/backups
+      - /:/source:rw
+      - /opt/prueba_restore:/restore
+    ports:
+      - "8200:8200"

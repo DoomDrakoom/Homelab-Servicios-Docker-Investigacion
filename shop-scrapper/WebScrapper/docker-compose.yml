@@ -1,0 +1,21 @@
+services:
+  webscrapper:
+    build: .
+    container_name: super-scraper
+    restart: unless-stopped
+    ports:
+      # host:contenedor — cambia 8410 si choca con otro servicio del homelab
+      - "8410:8000"
+    environment:
+      - LOG_LEVEL=INFO
+    volumes:
+      # caché de scrapes, Excel generados e historial sobreviven a los reinicios
+      - ./data:/app/data
+    # Chromium headless necesita /dev/shm amplio
+    shm_size: "1gb"
+
+# Detrás de Nginx Proxy Manager:
+#  - si NPM corre en otra red de Docker, añade este servicio a esa red y apunta
+#    el proxy host a super-scraper:8000 (puerto interno);
+#  - si NPM proxya al host, apunta a <ip-del-host>:8410.
+#  - habilita WebSockets/streaming en NPM para que el progreso SSE no se corte.

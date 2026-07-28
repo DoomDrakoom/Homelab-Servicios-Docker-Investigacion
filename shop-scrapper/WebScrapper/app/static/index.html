@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supermercados Scraper</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1c2733; --muted: #6b7a8c;
+    --accent: #1a7f4b; --accent-soft: #e3f3ea; --border: #dde3ea; --error: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12181f; --card: #1b232d; --text: #e8edf2; --muted: #93a3b4;
+            --accent: #34c179; --accent-soft: #14351f; --border: #2c3947; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .chains { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .chain { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .chain label { display: flex; gap: 8px; align-items: center; font-weight: 600; cursor: pointer; }
+  .chain .cats { margin-top: 8px; font-size: .85rem; }
+  .chain select { width: 100%; margin-top: 6px; background: var(--bg); color: var(--text);
+                  border: 1px solid var(--border); border-radius: 6px; padding: 4px; }
+  .chain .hint { color: var(--muted); font-size: .8rem; }
+  button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+                   padding: 10px 22px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); }
+  .bar { height: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+  .chainprog { margin: 10px 0; }
+  .chainprog .name { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 4px; }
+  .status-done { color: var(--accent); font-weight: 600; }
+  .status-error { color: var(--error); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--accent); }
+  .totalpct { font-size: 1.4rem; font-weight: 700; min-width: 70px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Supermercados Scraper</h1>
+  <p class="sub">Extrae el catálogo de las cadenas seleccionadas y descarga un Excel clasificado por categoría.</p>
+
+  <div class="card">
+    <h2>1 · Cadenas y categorías</h2>
+    <div class="chains" id="chains"></div>
+    <p class="hint muted" style="margin:10px 0 0">
+      Sin selección de categorías se raspa el catálogo completo de la cadena.
+      «Usar caché» reutiliza datos descargados en las últimas 12 h (reanuda scrapes interrumpidos).
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>2 · Lanzar</h2>
+    <div class="row">
+      <button class="primary" id="launch">Lanzar scraping</button>
+      <label><input type="checkbox" id="useCache" checked> Usar caché</label>
+      <span class="muted" id="launchMsg"></span>
+    </div>
+    <div id="progress" style="display:none; margin-top:16px">
+      <div class="row" style="margin-bottom:10px">
+        <span class="totalpct" id="totalPct">0%</span>
+        <div class="bar" style="flex:1"><div id="totalBar"></div></div>
+      </div>
+      <div id="chainBars"></div>
+      <p id="result" style="margin:12px 0 0"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Historial</h2>
+    <table>
+      <thead><tr><th>Fecha (UTC)</th><th>Cadenas</th><th>Estado</th><th>Productos</th><th>Excel</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const chainState = {}; // id -> {checked, cats: [ids] | null}
+
+async function loadChains() {
+  const chains = await (await fetch('/api/chains')).json();
+  const box = $('#chains');
+  for (const c of chains) {
+    chainState[c.id] = { checked: false, cats: null };
+    const div = document.createElement('div');
+    div.className = 'chain';
+    div.innerHTML = `
+      <label><input type="checkbox" data-chain="${c.id}"> ${c.name}</label>
+      <div class="cats">
+        <a href="#" data-loadcats="${c.id}">Elegir categorías…</a>
+        <div data-catbox="${c.id}"></div>
+      </div>`;
+    box.appendChild(div);
+  }
+  box.addEventListener('change', (e) => {
+    const chain = e.target.dataset.chain;
+    if (chain) chainState[chain].checked = e.target.checked;
+    const sel = e.target.closest('select');
+    if (sel) {
+      const ids = [...sel.selectedOptions].map(o => o.value);
+      chainState[sel.dataset.catsel].cats = ids.length ? ids : null;
+    }
+  });
+  box.addEventListener('click', async (e) => {
+    const chain = e.target.dataset.loadcats;
+    if (!chain) return;
+    e.preventDefault();
+    e.target.textContent = 'Cargando categorías…';
+    try {
+      const cats = await (await fetch(`/api/chains/${chain}/categories`)).json();
+      if (!Array.isArray(cats)) throw new Error(cats.detail || 'error');
+      const sel = document.createElement('select');
+      sel.multiple = true; sel.size = Math.min(8, cats.length); sel.dataset.catsel = chain;
+      for (const cat of cats) {
+        const o = document.createElement('option');
+        o.value = cat.id; o.textContent = cat.name;
+        sel.appendChild(o);
+      }
+      const holder = document.querySelector(`[data-catbox="${chain}"]`);
+      holder.innerHTML = '<span class="hint">Ctrl+clic para varias; vacío = todas</span>';
+      holder.appendChild(sel);
+      e.target.remove();
+    } catch (err) {
+      e.target.textContent = `No disponible (${err.message}) — reintentar`;
+    }
+  });
+}
+
+function renderProgress(job) {
+  $('#progress').style.display = '';
+  $('#totalPct').textContent = `${Math.round(job.percent)}%`;
+  $('#totalBar').style.width = `${job.percent}%`;
+  const holder = $('#chainBars');
+  holder.innerHTML = '';
+  for (const [chain, p] of Object.entries(job.progress)) {
+    const pct = p.state === 'done' ? 100 : (p.total ? Math.round(100 * p.index / p.total) : 0);
+    const status = p.state === 'done' ? `<span class="status-done">✔ ${p.products} productos</span>`
+      : p.state === 'error' ? `<span class="status-error">error: ${p.error || ''}</span>`
+      : p.state === 'running' ? `${p.index}/${p.total || '?'} · ${p.category || 'preparando…'} · ${p.products} prod.`
+      : 'en cola';
+    holder.insertAdjacentHTML('beforeend', `
+      <div class="chainprog">
+        <div class="name"><strong>${chain}</strong><span class="muted">${status}</span></div>
+        <div class="bar"><div style="width:${pct}%"></div></div>
+      </div>`);
+  }
+  if (job.status === 'done') {
+    $('#result').innerHTML = `Completado: <strong>${job.products}</strong> productos ·
+      <a href="/api/download/${job.id}">Descargar Excel</a>`;
+  } else if (job.status === 'error') {
+    $('#result').innerHTML = `<span class="status-error">Error: ${job.error}</span>`;
+  }
+}
+
+async function loadHistory() {
+  const jobs = await (await fetch('/api/jobs')).json();
+  $('#history').innerHTML = jobs.map(j => `
+    <tr>
+      <td>${j.created_at}</td>
+      <td>${j.chains.join(', ')}</td>
+      <td class="${j.status === 'done' ? 'status-done' : j.status === 'error' ? 'status-error' : ''}">${j.status}</td>
+      <td>${j.products ?? '—'}</td>
+      <td>${j.status === 'done' ? `<a href="/api/download/${j.id}">descargar</a>` : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">Sin ejecuciones todavía</td></tr>';
+}
+
+$('#launch').addEventListener('click', async () => {
+  const chains = Object.entries(chainState).filter(([, s]) => s.checked).map(([id]) => id);
+  if (!chains.length) { $('#launchMsg').textContent = 'Selecciona al menos una cadena.'; return; }
+  const categories = {};
+  for (const id of chains) if (chainState[id].cats) categories[id] = chainState[id].cats;
+  $('#launch').disabled = true;
+  $('#launchMsg').textContent = 'Lanzando…';
+  $('#result').textContent = '';
+  try {
+    const res = await fetch('/api/scrape', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chains, categories: Object.keys(categories).length ? categories : null,
+                             use_cache: $('#useCache').checked }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.status);
+    $('#launchMsg').textContent = `Job ${data.job_id}`;
+    const src = new EventSource(`/api/events/${data.job_id}`);
+    src.onmessage = (ev) => {
+      const job = JSON.parse(ev.data);
+      renderProgress(job);
+      if (job.status === 'done' || job.status === 'error') {
+        src.close();
+        $('#launch').disabled = false;
+        loadHistory();
+      }
+    };
+    src.onerror = () => { /* el navegador reintenta solo */ };
+  } catch (err) {
+    $('#launchMsg').textContent = `Error: ${err.message}`;
+    $('#launch').disabled = false;
+  }
+});
+
+loadChains();
+loadHistory();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  jellyfin:
+    container_name: jellyfin
+    image: jellyfin/jellyfin:latest
+    user: "1000:1000"
+    network_mode: host
+    volumes:
+      - ./config:/config
+      - ./cache:/cache
+      - /ruta/a/tus/peliculas:/media/movies:ro
+      - /ruta/a/tus/series:/media/tv:ro
+    restart: unless-stopped
