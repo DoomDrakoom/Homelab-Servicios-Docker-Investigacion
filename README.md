@@ -76,6 +76,6 @@ Herramienta de monitoreo de uptime que comprueba periódicamente si los servicio
 
 ---
 
-## 📄 README.md
-
-Este mismo archivo, con la documentación general del stack de servicios del servidor.
+## 🏡 Home Assistant
+Categoría: Domótica / Automatización del hogar
+Plataforma de automatización domótica de código abierto que centraliza el control de dispositivos inteligentes del hogar (TV, impresoras, sensores, etc.) en una única interfaz. Permite crear automatizaciones personalizadas, integrar dispositivos de distintos fabricantes mediante protocolos como SNMP o Wake-on-LAN, y gestionar todo el ecosistema smart-home sin depender de la nube de terceros.
